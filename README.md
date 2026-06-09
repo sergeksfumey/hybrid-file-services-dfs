@@ -267,7 +267,7 @@ Key monitoring scenarios:
 ---
 
 ## Repository Structure
-
+```
 hybrid-file-services-dfs/
 ├── terraform/
 │   ├── modules/
@@ -293,7 +293,7 @@ hybrid-file-services-dfs/
 │   └── tiering-operations.md
 └── pipelines/
     └── azure-pipelines.yml
-
+```
 ---
 
 ## Key Trade-offs
