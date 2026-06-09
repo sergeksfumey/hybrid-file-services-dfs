@@ -1,0 +1,78 @@
+trigger:
+  branches:
+    include:
+      - main
+  paths:
+    include:
+      - terraform/**
+
+pr:
+  branches:
+    include:
+      - main
+
+variables:
+  - group: hybrid-file-services-prod-vars
+  - name: TF_VERSION
+    value: '1.6.0'
+  - name: WORKING_DIR
+    value: 'terraform/environments/prod'
+
+stages:
+
+  - stage: SecurityScan
+    displayName: IaC Security Scan
+    jobs:
+      - job: IaCScan
+        pool:
+          vmImage: ubuntu-latest
+        steps:
+          - script: |
+              pip install checkov
+              checkov -d terraform/ --framework terraform
+            displayName: Checkov IaC scan
+
+  - stage: Validate
+    displayName: Terraform Validate and Plan
+    dependsOn: SecurityScan
+    jobs:
+      - job: TerraformPlan
+        pool:
+          vmImage: ubuntu-latest
+        steps:
+          - task: TerraformInstaller@1
+            inputs:
+              terraformVersion: $(TF_VERSION)
+
+          - task: AzureCLI@2
+            displayName: Terraform Init and Plan
+            inputs:
+              azureSubscription: $(AZURE_SERVICE_CONNECTION)
+              scriptType: bash
+              scriptLocation: inlineScript
+              inlineScript: |
+                cd $(WORKING_DIR)
+                terraform init
+                terraform validate
+                terraform plan -var-file="prod.tfvars" -out=tfplan
+
+  - stage: Apply
+    displayName: Apply
+    dependsOn: Validate
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+    jobs:
+      - deployment: TerraformApply
+        environment: production
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - task: AzureCLI@2
+                  displayName: Terraform Apply
+                  inputs:
+                    azureSubscription: $(AZURE_SERVICE_CONNECTION)
+                    scriptType: bash
+                    scriptLocation: inlineScript
+                    inlineScript: |
+                      cd $(WORKING_DIR)
+                      terraform apply tfplan

@@ -1,0 +1,21 @@
+// Azure File Share Performance Monitoring
+// Data source: AzureMetrics (Storage Account metrics)
+// Tracks: availability, latency, transaction rates
+
+AzureMetrics
+| where TimeGenerated > ago(1h)
+| where ResourceProvider == "MICROSOFT.STORAGE"
+| where MetricName in ("Availability", "SuccessE2ELatency", "Transactions", "FileCapacity")
+| summarize
+    AvgValue  = avg(Average),
+    MaxValue  = max(Maximum),
+    MinValue  = min(Minimum),
+    SampleCount = count()
+    by MetricName, bin(TimeGenerated, 5m)
+| project
+    TimeGenerated,
+    MetricName,
+    AvgValue  = round(AvgValue, 2),
+    MaxValue  = round(MaxValue, 2),
+    MinValue  = round(MinValue, 2)
+| order by TimeGenerated desc, MetricName asc

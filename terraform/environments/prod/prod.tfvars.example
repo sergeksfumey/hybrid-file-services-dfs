@@ -1,0 +1,9 @@
+# Copy to prod.tfvars -- DO NOT commit to version control
+
+resource_group_name  = "rg-hybrid-file-services-prod"
+location             = "westeurope"
+storage_account_name = "<globally-unique-name>"
+file_share_name      = "corp-file-share"
+quota_gb             = 5120
+vault_name           = "rsv-file-services-prod"
+allowed_ip_ranges    = ["<branch-office-ip>/32", "<office-ip>/24"]

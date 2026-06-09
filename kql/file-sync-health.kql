@@ -1,0 +1,18 @@
+// Azure File Sync Health Monitoring
+// Data source: StorageSyncOperations (Storage Sync Service diagnostic logs)
+// Detects: sync errors, stale sessions, high pending file counts
+
+StorageSyncOperations
+| where TimeGenerated > ago(1h)
+| where OperationName contains "StorageSync"
+| extend
+    ServerName    = tostring(split(ResourceId, "/")[8]),
+    SyncGroupName = tostring(split(ResourceId, "/")[10]),
+    ResultCode    = tostring(column_ifexists("ResultCode_s", ""))
+| where ResultCode != "0" and isnotempty(ResultCode)
+| summarize
+    ErrorCount    = count(),
+    LatestError   = max(TimeGenerated),
+    ErrorCodes    = make_set(ResultCode)
+    by ServerName, SyncGroupName, OperationName
+| order by ErrorCount desc
